@@ -473,12 +473,12 @@ function completeDelivery(client) {
   saveDelivery(delivery);
   sendWhatsAppNotification(delivery);
   
-  // Immediately disable the button
+  // Immediately disable and gray out the button
   const buttons = document.querySelectorAll('.complete-btn');
   buttons.forEach(btn => {
     if (btn.textContent.includes(client)) {
       btn.disabled = true;
-      btn.classList.add('disabled');
+      btn.classList.add('completed');
       btn.textContent = 'Consegnato';
     }
   });

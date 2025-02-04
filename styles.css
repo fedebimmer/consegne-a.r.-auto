@@ -111,6 +111,12 @@ button:active {
   cursor: not-allowed;
 }
 
+.complete-btn.completed {
+  background: #ccc !important;
+  color: #fff;
+  cursor: not-allowed;
+}
+
 .nav-button {
   background: #fff;
   border: 1px solid #007aff;
