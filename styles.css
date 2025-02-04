@@ -105,6 +105,12 @@ button:active {
   cursor: not-allowed;
 }
 
+.complete-btn.disabled {
+  background: #ccc !important;
+  color: #fff;
+  cursor: not-allowed;
+}
+
 .nav-button {
   background: #fff;
   border: 1px solid #007aff;
@@ -138,6 +144,23 @@ button:active {
     opacity: 1;
     transform: translateX(0);
   }
+}
+
+/* Add new styles for the completion message */
+.completion-message {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  margin: 20px auto;
+  max-width: 400px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.completion-message p {
+  font-size: 18px;
+  margin-bottom: 20px;
+  line-height: 1.4;
 }
 
 /* Messaggio di completamento consegne */

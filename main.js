@@ -229,21 +229,64 @@ function renderRouteSelection() {
 
   const title = document.createElement("h2");
   title.className = "section-title";
-  title.textContent = "Seleziona il Giro";
+  title.textContent = "Seleziona i Giri";
   container.appendChild(title);
 
+  // Add instructions
+  const instructions = document.createElement("p");
+  instructions.textContent = "Puoi selezionare più giri per una sessione di consegna.";
+  instructions.style.textAlign = "center";
+  instructions.style.marginBottom = "20px";
+  container.appendChild(instructions);
+
   Object.keys(routes).forEach((route) => {
-    const btn = document.createElement("button");
-    btn.className = "route-btn";
-    btn.textContent = route;
-    btn.addEventListener("click", () => {
-      appState.currentRoute = route;
-      appState.selectedClients = null;
-      appState.currentView = "clientSelection";
-      renderApp();
-    });
-    container.appendChild(btn);
+    const wrapper = document.createElement("div");
+    wrapper.style.marginBottom = "10px";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = route;
+    checkbox.value = route;
+
+    const label = document.createElement("label");
+    label.htmlFor = route;
+    label.textContent = route;
+    label.style.marginLeft = "10px";
+
+    wrapper.appendChild(checkbox);
+    wrapper.appendChild(label);
+    container.appendChild(wrapper);
   });
+
+  const nextBtn = document.createElement("button");
+  nextBtn.className = "route-btn";
+  nextBtn.textContent = "Avanti";
+  nextBtn.addEventListener("click", () => {
+    const selectedRoutes = [];
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+      if (checkbox.checked) {
+        selectedRoutes.push(checkbox.value);
+      }
+    });
+
+    if (selectedRoutes.length === 0) {
+      alert("Seleziona almeno un giro.");
+      return;
+    }
+
+    // Merge clients from all selected routes
+    const mergedClients = {};
+    selectedRoutes.forEach(route => {
+      mergedClients[route] = routes[route];
+    });
+
+    appState.currentRoute = selectedRoutes[0]; // Set first route as current
+    appState.selectedClients = mergedClients[appState.currentRoute];
+    appState.currentView = "clientSelection";
+    renderApp();
+  });
+  container.appendChild(nextBtn);
 
   app.appendChild(container);
 }
@@ -333,34 +376,7 @@ function renderDepartureConfirm() {
   const yesBtn = document.createElement("button");
   yesBtn.textContent = "Sì";
   yesBtn.addEventListener("click", () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        function (position) {
-          processDeparture(position);
-        },
-        function (error) {
-          if (
-            confirm(
-              "Errore nel rilevamento della posizione (" +
-                error.message +
-                "). Vuoi procedere comunque utilizzando la posizione predefinita?"
-            )
-          ) {
-            const fallbackCoords = { lat: 45.4654, lng: 9.1866 };
-            processDeparture({ coords: fallbackCoords });
-          }
-        }
-      );
-    } else {
-      if (
-        confirm(
-          "Geolocalizzazione non supportata dal tuo browser. Vuoi procedere comunque utilizzando la posizione predefinita?"
-        )
-      ) {
-        const fallbackCoords = { lat: 45.4654, lng: 9.1866 };
-        processDeparture({ coords: fallbackCoords });
-      }
-    }
+    processDeparture();
   });
   container.appendChild(yesBtn);
 
@@ -377,38 +393,13 @@ function renderDepartureConfirm() {
   app.appendChild(container);
 }
 
-function processDeparture(position) {
-  const driverCoords = {
-    lat: position.coords.latitude,
-    lng: position.coords.longitude
-  };
-  const coordsMap = clientCoordinates[appState.currentRoute];
-  const markers = [];
-  appState.selectedClients.forEach((client) => {
-    if (coordsMap[client]) {
-      markers.push(coordsMap[client]);
-    }
-  });
-  if (markers.length > 0) {
-    const origin = `${driverCoords.lat},${driverCoords.lng}`;
-    const destination = `${markers[markers.length - 1].lat},${markers[markers.length - 1].lng}`;
-    const waypoints = markers
-      .slice(0, markers.length - 1)
-      .map((coord) => `${coord.lat},${coord.lng}`)
-      .join("|");
-    let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
-    if (waypoints) {
-      url += `&waypoints=optimize:true|${waypoints}`;
-    }
-    appState.optimizedRouteLink = url;
-  }
+function processDeparture() {
   const now = new Date();
   const departureRecord = {
     name: appState.userName,
     route: appState.currentRoute,
     datetime: now.toISOString(),
     type: "departure",
-    driverCoords: driverCoords,
     routeLink: appState.optimizedRouteLink || ""
   };
   saveDeparture(departureRecord);
@@ -455,7 +446,7 @@ function renderDeliveryList() {
     item.appendChild(clientName);
 
     const btn = document.createElement("button");
-    btn.className = "complete-btn";
+    btn.className = `complete-btn ${isDeliveredForToday(client) ? 'disabled' : ''}`;
     btn.textContent = isDeliveredForToday(client)
       ? "Consegnato"
       : "Completa Consegna";
@@ -472,45 +463,47 @@ function renderDeliveryList() {
 }
 
 function completeDelivery(client) {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      function (position) {
-        const now = new Date();
-        const delivery = {
-          name: appState.userName,
-          route: appState.currentRoute,
-          client: client,
-          datetime: now.toISOString(),
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
-        saveDelivery(delivery);
-        sendWhatsAppNotification(delivery);
-        if (checkAllDeliveriesCompleted()) {
-          finishCycle();
-        } else {
-          renderApp();
-        }
-      },
-      function (error) {
-        alert(
-          "Posizione non disponibile. Per favore, abilita la geolocalizzazione nel browser."
-        );
-      }
-    );
-  } else {
-    alert("Geolocation non supportata dal tuo browser.");
-  }
+  const now = new Date();
+  const delivery = {
+    name: appState.userName,
+    route: appState.currentRoute,
+    client: client,
+    datetime: now.toISOString()
+  };
+  saveDelivery(delivery);
+  sendWhatsAppNotification(delivery);
+  
+  // Immediately disable the button
+  const buttons = document.querySelectorAll('.complete-btn');
+  buttons.forEach(btn => {
+    if (btn.textContent.includes(client)) {
+      btn.disabled = true;
+      btn.classList.add('disabled');
+      btn.textContent = 'Consegnato';
+    }
+  });
+  
+  // Check if all deliveries are completed after a short delay
+  setTimeout(() => {
+    if (checkAllDeliveriesCompleted()) {
+      finishCycle();
+    }
+  }, 100);
 }
 
 function sendWhatsAppNotification(delivery) {
-  let message = `Consegna effettuata da ${delivery.name} per il cliente ${delivery.client}.`;
-  if (delivery.lat && delivery.lng) {
-    message += ` Posizione: https://www.google.com/maps?q=${delivery.lat},${delivery.lng}`;
+  const message = `Consegna effettuata da ${delivery.name} per il cliente ${delivery.client}.`;
+  const url = `https://api.whatsapp.com/send?phone=393939393799&text=${encodeURIComponent(message)}`;
+  window.open(url, "_blank");
+}
+
+function sendDepartureNotification(departure) {
+  const departureTimeFormatted = new Date(departure.datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  let message = ` ${departure.name} è partito per le consegne del giro ${departure.route} alle ${departureTimeFormatted}`;
+  if (departure.routeLink) {
+    message += `\nEcco il percorso: ${departure.routeLink}`;
   }
-  const url = `https://api.whatsapp.com/send?phone=393939393799&text=${encodeURIComponent(
-    message
-  )}`;
+  const url = `https://api.whatsapp.com/send?phone=393939393799&text=${encodeURIComponent(message)}`;
   window.open(url, "_blank");
 }
 
@@ -537,16 +530,7 @@ function renderHistory() {
         item.className = "list-item";
         const date = new Date(record.datetime);
         let text = `${date.toLocaleString()} - ${record.name} - ${record.route} - ${record.client}`;
-        const info = document.createElement("span");
-        info.textContent = text;
-        item.appendChild(info);
-        if (record.lat && record.lng) {
-          const posLink = document.createElement("a");
-          posLink.href = `https://www.google.com/maps?q=${record.lat},${record.lng}`;
-          posLink.target = "_blank";
-          posLink.textContent = " (Posizione)";
-          item.appendChild(posLink);
-        }
+        item.textContent = text;
         container.appendChild(item);
       }
     });
@@ -637,16 +621,6 @@ function checkAllDeliveriesCompleted() {
   return appState.selectedClients.every((client) => isDeliveredForToday(client));
 }
 
-function sendDepartureNotification(departure) {
-  const departureTimeFormatted = new Date(departure.datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  let message = ` ${departure.name} è partito per le consegne del giro ${departure.route} alle ${departureTimeFormatted}`;
-  if (departure.routeLink) {
-    message += `\nEcco il percorso: ${departure.routeLink}`;
-  }
-  const url = `https://api.whatsapp.com/send?phone=393939393799&text=${encodeURIComponent(message)}`;
-  window.open(url, "_blank");
-}
-
 function getCronologiaConsegne() {
   const data = localStorage.getItem("cronologiaConsegne");
   return data ? JSON.parse(data) : [];
@@ -693,16 +667,43 @@ function finishCycle() {
   appendCronologiaConsegne(deliveryRecords);
   const summary = computeCycleSummary(currentCycleDeliveries);
   localStorage.setItem("riepilogoConsegne", JSON.stringify(summary));
-  console.log("RiepilogoConsegne:", localStorage.getItem("riepilogoConsegne"));
   resetCurrentCycle();
+  
   const app = document.getElementById("app");
-  const notice = document.createElement("div");
-  notice.className = "complete-message fade-in";
-  notice.textContent = "Consegne resettate con successo! Pronto per il prossimo giro.";
-  app.appendChild(notice);
-  setTimeout(() => {
-    location.reload();
-  }, 2000);
+  
+  // Create the completion message container
+  const messageContainer = document.createElement("div");
+  messageContainer.className = "container fade-in";
+  
+  // Add the message
+  const message = document.createElement("p");
+  message.style.textAlign = "center";
+  message.style.marginBottom = "20px";
+  message.textContent = "HAI TERMINATO IL GIRO CONSEGNE, TORNA IN MAGAZZINO PER IL PROSSIMO GIRO.";
+  messageContainer.appendChild(message);
+  
+  // Add the WhatsApp button
+  const whatsappBtn = document.createElement("button");
+  whatsappBtn.className = "route-btn";
+  whatsappBtn.textContent = "OK";
+  whatsappBtn.addEventListener("click", () => {
+    const whatsappMessage = `Fattorino ${appState.userName} in rientro`;
+    const url = `https://api.whatsapp.com/send?phone=393939393799&text=${encodeURIComponent(whatsappMessage)}`;
+    window.open(url, "_blank");
+    setTimeout(() => {
+      location.reload();
+    }, 500);
+  });
+  messageContainer.appendChild(whatsappBtn);
+  
+  // Add the container to the app
+  app.appendChild(messageContainer);
+  
+  // Remove any existing complete message
+  const existingMessage = document.querySelector(".complete-message");
+  if (existingMessage) {
+    existingMessage.remove();
+  }
 }
 
 let touchstartX = 0;
