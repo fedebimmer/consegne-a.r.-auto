@@ -32,7 +32,12 @@ const routes = {
     "R.VAI",
     "SANTA BARBARA",
     "TARANTOLA",
-    "UNIRADE"
+    "UNIRADE",
+    "LA COPERTON",
+    "SCRIMA",
+    "POINT DISTRIBUZIONE",
+    "RAMBO",
+    "RGL"
   ],
   "Giro Vidigulfo": [
     "ARETUSA",
@@ -76,7 +81,12 @@ const clientCoordinates = {
     "R.VAI": { lat: 45.4724, lng: 9.1970 },
     "SANTA BARBARA": { lat: 45.4734, lng: 9.1980 },
     "TARANTOLA": { lat: 45.4744, lng: 9.1990 },
-    "UNIRADE": { lat: 45.4754, lng: 9.2000 }
+    "UNIRADE": { lat: 45.4754, lng: 9.2000 },
+    "LA COPERTON": { lat: 45.4715, lng: 9.1915 },
+    "SCRIMA": { lat: 45.4716, lng: 9.1916 },
+    "POINT DISTRIBUZIONE": { lat: 45.4717, lng: 9.1917 },
+    "RAMBO": { lat: 45.4718, lng: 9.1918 },
+    "RGL": { lat: 45.4719, lng: 9.1919 }
   },
   "Giro Vidigulfo": {
     "ARETUSA": { lat: 45.4654, lng: 9.2010 },

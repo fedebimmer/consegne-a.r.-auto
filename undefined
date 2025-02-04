@@ -1,8 +1,16 @@
-Object.keys(summary)
-  .sort((a, b) => b.localeCompare(a))
-  .forEach((day) => {
-    const item = document.createElement("div");
-    item.className = "list-item";
-    item.textContent = `${day}: ${summary[day]} consegne`;
-    container.appendChild(item);
-  });
+const clientName = document.createElement("span");
+clientName.textContent = client;
+item.appendChild(clientName);
+
+const btn = document.createElement("button");
+btn.className = "complete-btn";
+btn.textContent = isDeliveredForToday(client)
+  ? "Consegnato"
+  : "Completa Consegna";
+btn.disabled = isDeliveredForToday(client);
+btn.addEventListener("click", () => {
+  completeDelivery(client);
+});
+item.appendChild(btn);
+
+container.appendChild(item);
