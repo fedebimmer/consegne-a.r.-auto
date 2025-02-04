@@ -52,7 +52,6 @@ const routes = {
   ]
 };
 
-// Mappa preimpostata delle coordinate GPS per ogni cliente
 const clientCoordinates = {
   "Giro Binasco": {
     "BUZZETTA GOMME": { lat: 45.4654, lng: 9.1866 },
@@ -98,6 +97,11 @@ const clientCoordinates = {
 };
 
 function initApp() {
+  const savedName = localStorage.getItem("fattorinoNome");
+  if (savedName) {
+    appState.userName = savedName;
+    appState.currentView = "routeSelection";
+  }
   renderApp();
 }
 
@@ -130,6 +134,11 @@ function renderNav() {
   const headerEl = document.createElement("header");
   headerEl.classList.add("fade-in");
   headerEl.innerHTML = `<h1>Gestione Consegne</h1>`;
+  
+  const welcomeEl = document.createElement("p");
+  welcomeEl.textContent = `Benvenuto, ${appState.userName}!`;
+  headerEl.appendChild(welcomeEl);
+  
   const nav = document.createElement("nav");
 
   const btnConsegne = document.createElement("button");
@@ -156,6 +165,7 @@ function renderNav() {
   const btnLogout = document.createElement("button");
   btnLogout.textContent = "Logout";
   btnLogout.addEventListener("click", () => {
+    localStorage.removeItem("fattorinoNome");
     appState.userName = null;
     appState.currentRoute = null;
     appState.selectedClients = null;
@@ -192,6 +202,7 @@ function renderLogin() {
     const name = input.value.trim();
     if (name !== "") {
       appState.userName = name;
+      localStorage.setItem("fattorinoNome", name);
       appState.currentView = "routeSelection";
       renderApp();
     }
@@ -312,54 +323,34 @@ function renderDepartureConfirm() {
   const yesBtn = document.createElement("button");
   yesBtn.textContent = "Sì";
   yesBtn.addEventListener("click", () => {
-    navigator.geolocation.getCurrentPosition(
-      function (position) {
-        const driverCoords = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        };
-        const coordsMap = clientCoordinates[appState.currentRoute];
-        const markers = [];
-        appState.selectedClients.forEach((client) => {
-          if (coordsMap[client]) {
-            markers.push(coordsMap[client]);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        function (position) {
+          processDeparture(position);
+        },
+        function (error) {
+          if (
+            confirm(
+              "Errore nel rilevamento della posizione (" +
+                error.message +
+                "). Vuoi procedere comunque utilizzando la posizione predefinita?"
+            )
+          ) {
+            const fallbackCoords = { lat: 45.4654, lng: 9.1866 };
+            processDeparture({ coords: fallbackCoords });
           }
-        });
-        if (markers.length > 0) {
-          const origin = `${driverCoords.lat},${driverCoords.lng}`;
-          const destination = `${markers[markers.length - 1].lat},${markers[markers.length - 1].lng}`;
-          const waypoints = markers
-            .slice(0, markers.length - 1)
-            .map((coord) => `${coord.lat},${coord.lng}`)
-            .join("|");
-          let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
-          if (waypoints) {
-            url += `&waypoints=optimize:true|${waypoints}`;
-          }
-          appState.optimizedRouteLink = url;
         }
-        const now = new Date();
-        const departureRecord = {
-          name: appState.userName,
-          route: appState.currentRoute,
-          datetime: now.toISOString(),
-          type: "departure",
-          driverCoords: driverCoords,
-          routeLink: appState.optimizedRouteLink || "",
-        };
-        saveDeparture(departureRecord);
-        sendDepartureNotification(departureRecord);
-        saveCompletedRoute({
-          ...departureRecord,
-          clients: appState.selectedClients,
-        });
-        appState.currentView = "deliveries";
-        renderApp();
-      },
-      function (error) {
-        alert("Errore nel rilevamento della posizione: " + error.message);
+      );
+    } else {
+      if (
+        confirm(
+          "Geolocalizzazione non supportata dal tuo browser. Vuoi procedere comunque utilizzando la posizione predefinita?"
+        )
+      ) {
+        const fallbackCoords = { lat: 45.4654, lng: 9.1866 };
+        processDeparture({ coords: fallbackCoords });
       }
-    );
+    }
   });
   container.appendChild(yesBtn);
 
@@ -374,6 +365,50 @@ function renderDepartureConfirm() {
   container.appendChild(backBtn);
 
   app.appendChild(container);
+}
+
+function processDeparture(position) {
+  const driverCoords = {
+    lat: position.coords.latitude,
+    lng: position.coords.longitude
+  };
+  const coordsMap = clientCoordinates[appState.currentRoute];
+  const markers = [];
+  appState.selectedClients.forEach((client) => {
+    if (coordsMap[client]) {
+      markers.push(coordsMap[client]);
+    }
+  });
+  if (markers.length > 0) {
+    const origin = `${driverCoords.lat},${driverCoords.lng}`;
+    const destination = `${markers[markers.length - 1].lat},${markers[markers.length - 1].lng}`;
+    const waypoints = markers
+      .slice(0, markers.length - 1)
+      .map((coord) => `${coord.lat},${coord.lng}`)
+      .join("|");
+    let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+    if (waypoints) {
+      url += `&waypoints=optimize:true|${waypoints}`;
+    }
+    appState.optimizedRouteLink = url;
+  }
+  const now = new Date();
+  const departureRecord = {
+    name: appState.userName,
+    route: appState.currentRoute,
+    datetime: now.toISOString(),
+    type: "departure",
+    driverCoords: driverCoords,
+    routeLink: appState.optimizedRouteLink || ""
+  };
+  saveDeparture(departureRecord);
+  sendDepartureNotification(departureRecord);
+  saveCompletedRoute({
+    ...departureRecord,
+    clients: appState.selectedClients
+  });
+  appState.currentView = "deliveries";
+  renderApp();
 }
 
 function renderDeliveryList() {
@@ -448,7 +483,9 @@ function completeDelivery(client) {
         }
       },
       function (error) {
-        alert("Posizione non disponibile. Per favore, abilita la geolocalizzazione nel browser.");
+        alert(
+          "Posizione non disponibile. Per favore, abilita la geolocalizzazione nel browser."
+        );
       }
     );
   } else {
@@ -461,7 +498,9 @@ function sendWhatsAppNotification(delivery) {
   if (delivery.lat && delivery.lng) {
     message += ` Posizione: https://www.google.com/maps?q=${delivery.lat},${delivery.lng}`;
   }
-  const url = `https://api.whatsapp.com/send?phone=393939393799&text=${encodeURIComponent(message)}`;
+  const url = `https://api.whatsapp.com/send?phone=393939393799&text=${encodeURIComponent(
+    message
+  )}`;
   window.open(url, "_blank");
 }
 
@@ -475,36 +514,31 @@ function renderHistory() {
   title.textContent = "Cronologia Consegne";
   container.appendChild(title);
 
-  const records = getDeliveries().sort(
-    (a, b) => new Date(b.datetime) - new Date(a.datetime)
-  );
+  const history = getCronologiaConsegne().sort((a, b) => new Date(b.datetime) - new Date(a.datetime));
 
-  if (records.length === 0) {
+  if (history.length === 0) {
     const para = document.createElement("p");
     para.textContent = "Nessuna consegna registrata.";
     container.appendChild(para);
   } else {
-    records.forEach((record) => {
-      const item = document.createElement("div");
-      item.className = "list-item";
-      const date = new Date(record.datetime);
-      let text = `${date.toLocaleString()} - ${record.name} - ${record.route}`;
-      if (record.type === "departure") {
-        text += " - Partenza";
-      } else {
-        text += " - " + record.client;
+    history.forEach((record) => {
+      if (!record.type) {
+        const item = document.createElement("div");
+        item.className = "list-item";
+        const date = new Date(record.datetime);
+        let text = `${date.toLocaleString()} - ${record.name} - ${record.route} - ${record.client}`;
+        const info = document.createElement("span");
+        info.textContent = text;
+        item.appendChild(info);
+        if (record.lat && record.lng) {
+          const posLink = document.createElement("a");
+          posLink.href = `https://www.google.com/maps?q=${record.lat},${record.lng}`;
+          posLink.target = "_blank";
+          posLink.textContent = " (Posizione)";
+          item.appendChild(posLink);
+        }
+        container.appendChild(item);
       }
-      const info = document.createElement("span");
-      info.textContent = text;
-      item.appendChild(info);
-      if (record.lat && record.lng) {
-        const posLink = document.createElement("a");
-        posLink.href = `https://www.google.com/maps?q=${record.lat},${record.lng}`;
-        posLink.target = "_blank";
-        posLink.textContent = " (Posizione)";
-        item.appendChild(posLink);
-      }
-      container.appendChild(item);
     });
   }
 
@@ -518,30 +552,24 @@ function renderSummary() {
 
   const title = document.createElement("h2");
   title.className = "section-title";
-  title.textContent = "Riepilogo Giornaliero";
+  title.textContent = "Riepilogo Consegne";
   container.appendChild(title);
 
-  const deliveries = getDeliveries();
-  if (deliveries.length === 0) {
+  const summaryData = localStorage.getItem("riepilogoConsegne");
+  if (!summaryData) {
     const para = document.createElement("p");
     para.textContent = "Nessuna consegna registrata.";
     container.appendChild(para);
   } else {
-    const summary = {};
-    deliveries.forEach((delivery) => {
-      const day = delivery.datetime.substring(0, 10);
-      if (!summary[day]) summary[day] = 0;
-      summary[day]++;
-    });
-
-    Object.keys(summary)
-      .sort((a, b) => b.localeCompare(a))
-      .forEach((day) => {
-        const item = document.createElement("div");
-        item.className = "list-item";
-        item.textContent = `${day}: ${summary[day]} consegne`;
-        container.appendChild(item);
-      });
+    const summary = JSON.parse(summaryData);
+    const totalDiv = document.createElement("div");
+    totalDiv.className = "list-item";
+    totalDiv.textContent = `Numero totale di consegne: ${summary.totalConsegne}`;
+    container.appendChild(totalDiv);
+    const timeDiv = document.createElement("div");
+    timeDiv.className = "list-item";
+    timeDiv.textContent = `Tempo totale impiegato: ${summary.tempoTotale}`;
+    container.appendChild(timeDiv);
   }
 
   app.appendChild(container);
@@ -560,21 +588,6 @@ function saveCurrentCycle(item) {
 
 function resetCurrentCycle() {
   localStorage.removeItem("currentCycle");
-}
-
-function getDeliveryHistory() {
-  const data = localStorage.getItem("deliveryHistory");
-  return data ? JSON.parse(data) : [];
-}
-
-function appendDeliveryHistory(items) {
-  const history = getDeliveryHistory();
-  items.forEach(item => history.push(item));
-  localStorage.setItem("deliveryHistory", JSON.stringify(history));
-}
-
-function getDeliveries() {
-  return getDeliveryHistory();
 }
 
 function saveDelivery(delivery) {
@@ -624,37 +637,62 @@ function sendDepartureNotification(departure) {
   window.open(url, "_blank");
 }
 
-function loadMap() {
-  if (!window.google || !google.maps) {
-    return;
-  }
-  const mapEl = document.getElementById("map");
-  if (!mapEl) return;
-  const coordsMap = clientCoordinates[appState.currentRoute];
-  const markersData = [];
-  appState.selectedClients.forEach((client) => {
-    if (coordsMap[client]) {
-      markersData.push({ client: client, position: coordsMap[client] });
+function getCronologiaConsegne() {
+  const data = localStorage.getItem("cronologiaConsegne");
+  return data ? JSON.parse(data) : [];
+}
+
+function appendCronologiaConsegne(items) {
+  const history = getCronologiaConsegne();
+  items.forEach((item) => history.push(item));
+  localStorage.setItem("cronologiaConsegne", JSON.stringify(history));
+  console.log("CronologiaConsegne:", localStorage.getItem("cronologiaConsegne"));
+}
+
+function computeCycleSummary(cycleData) {
+  let departureRecord = cycleData.find(item => item.type === "departure");
+  let deliveryRecords = cycleData.filter(item => !item.type);
+  let totalDeliveries = deliveryRecords.length;
+  let summary = {};
+  if (departureRecord && deliveryRecords.length > 0) {
+    let lastDelivery = deliveryRecords.reduce((prev, curr) => (new Date(curr.datetime) > new Date(prev.datetime) ? curr : prev));
+    let departureTime = new Date(departureRecord.datetime);
+    let lastTime = new Date(lastDelivery.datetime);
+    let diff = lastTime - departureTime;
+    let seconds = Math.floor(diff / 1000) % 60;
+    let minutes = Math.floor(diff / (1000 * 60)) % 60;
+    let hours = Math.floor(diff / (1000 * 60 * 60));
+    let tempoTotale = "";
+    if (hours > 0) {
+      tempoTotale = `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+      tempoTotale = `${minutes}m ${seconds}s`;
+    } else {
+      tempoTotale = `${seconds}s`;
     }
-  });
-  let center = { lat: 45.4654, lng: 9.1866 }; 
-  if (markersData.length > 0) {
-    center = markersData[0].position;
+    summary = { totalConsegne: totalDeliveries, tempoTotale: tempoTotale };
+  } else {
+    summary = { totalConsegne: totalDeliveries, tempoTotale: "N/A" };
   }
-  const map = new google.maps.Map(mapEl, {
-    center: center,
-    zoom: 14,
-    disableDefaultUI: true,
-    gestureHandling: "greedy"
-  });
-  markersData.forEach((markerData) => {
-    const marker = new google.maps.Marker({
-      position: markerData.position,
-      map: map,
-      title: markerData.client,
-      animation: google.maps.Animation.DROP
-    });
-  });
+  return summary;
+}
+
+function finishCycle() {
+  const currentCycleDeliveries = getCurrentCycle();
+  const deliveryRecords = currentCycleDeliveries.filter(item => !item.type);
+  appendCronologiaConsegne(deliveryRecords);
+  const summary = computeCycleSummary(currentCycleDeliveries);
+  localStorage.setItem("riepilogoConsegne", JSON.stringify(summary));
+  console.log("RiepilogoConsegne:", localStorage.getItem("riepilogoConsegne"));
+  resetCurrentCycle();
+  const app = document.getElementById("app");
+  const notice = document.createElement("div");
+  notice.className = "complete-message fade-in";
+  notice.textContent = "Consegne resettate con successo! Pronto per il prossimo giro.";
+  app.appendChild(notice);
+  setTimeout(() => {
+    location.reload();
+  }, 2000);
 }
 
 let touchstartX = 0;
@@ -682,17 +720,3 @@ document.addEventListener("touchend", function (e) {
   touchendX = e.changedTouches[0].screenX;
   handleGesture();
 });
-
-function finishCycle() {
-  const currentCycleDeliveries = getCurrentCycle();
-  appendDeliveryHistory(currentCycleDeliveries);
-  resetCurrentCycle();
-  const app = document.getElementById("app");
-  const notice = document.createElement("div");
-  notice.className = "complete-message fade-in";
-  notice.textContent = "Consegne resettate con successo! Pronto per il prossimo giro.";
-  app.appendChild(notice);
-  setTimeout(() => {
-    location.reload();
-  }, 2000);
-}
