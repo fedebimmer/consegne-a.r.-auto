@@ -277,7 +277,6 @@ function renderClientSelection() {
       return;
     }
     appState.selectedClients = selected;
-    // Dopo aver selezionato i clienti, passa alla schermata di conferma (con mappa integrata)
     appState.currentView = "departureConfirm";
     renderApp();
   });
@@ -302,13 +301,6 @@ function renderDepartureConfirm() {
   const app = document.getElementById("app");
   const container = document.createElement("div");
   container.className = "container fade-in";
-
-  // Aggiungi la mappa interattiva per mostrare i clienti selezionati
-  const mapContainer = document.createElement("div");
-  mapContainer.id = "map";
-  mapContainer.style.height = "300px";
-  mapContainer.style.marginBottom = "20px";
-  container.appendChild(mapContainer);
 
   const message = document.createElement("p");
   message.style.marginBottom = "20px";
@@ -357,7 +349,6 @@ function renderDepartureConfirm() {
         };
         saveDeparture(departureRecord);
         sendDepartureNotification(departureRecord);
-        // Salva il percorso completato in LocalStorage
         saveCompletedRoute({
           ...departureRecord,
           clients: appState.selectedClients,
@@ -383,8 +374,6 @@ function renderDepartureConfirm() {
   container.appendChild(backBtn);
 
   app.appendChild(container);
-  // Dopo aver inserito il container, carica la mappa con i punti dei clienti selezionati
-  loadMap();
 }
 
 function renderDeliveryList() {
@@ -453,17 +442,7 @@ function completeDelivery(client) {
         saveDelivery(delivery);
         sendWhatsAppNotification(delivery);
         if (checkAllDeliveriesCompleted()) {
-          const app = document.getElementById("app");
-          const notice = document.createElement("div");
-          notice.className = "complete-message fade-in";
-          notice.textContent = "Tutte le consegne completate! Inizio nuovo ciclo...";
-          app.appendChild(notice);
-          setTimeout(() => {
-            appState.currentRoute = null;
-            appState.selectedClients = null;
-            appState.currentView = "routeSelection";
-            renderApp();
-          }, 2000);
+          finishCycle();
         } else {
           renderApp();
         }
@@ -568,21 +547,42 @@ function renderSummary() {
   app.appendChild(container);
 }
 
-function getDeliveries() {
-  const data = localStorage.getItem("deliveries");
+function getCurrentCycle() {
+  const data = localStorage.getItem("currentCycle");
   return data ? JSON.parse(data) : [];
 }
 
+function saveCurrentCycle(item) {
+  const current = getCurrentCycle();
+  current.push(item);
+  localStorage.setItem("currentCycle", JSON.stringify(current));
+}
+
+function resetCurrentCycle() {
+  localStorage.removeItem("currentCycle");
+}
+
+function getDeliveryHistory() {
+  const data = localStorage.getItem("deliveryHistory");
+  return data ? JSON.parse(data) : [];
+}
+
+function appendDeliveryHistory(items) {
+  const history = getDeliveryHistory();
+  items.forEach(item => history.push(item));
+  localStorage.setItem("deliveryHistory", JSON.stringify(history));
+}
+
+function getDeliveries() {
+  return getDeliveryHistory();
+}
+
 function saveDelivery(delivery) {
-  const deliveries = getDeliveries();
-  deliveries.push(delivery);
-  localStorage.setItem("deliveries", JSON.stringify(deliveries));
+  saveCurrentCycle(delivery);
 }
 
 function saveDeparture(departure) {
-  const records = getDeliveries();
-  records.push(departure);
-  localStorage.setItem("deliveries", JSON.stringify(records));
+  saveCurrentCycle(departure);
 }
 
 function saveCompletedRoute(routeInfo) {
@@ -598,7 +598,7 @@ function getTodayDate() {
 }
 
 function isDeliveredForToday(client) {
-  const deliveries = getDeliveries();
+  const deliveries = getCurrentCycle();
   const today = getTodayDate();
   return deliveries.some(
     (delivery) =>
@@ -626,7 +626,6 @@ function sendDepartureNotification(departure) {
 
 function loadMap() {
   if (!window.google || !google.maps) {
-    console.error("Google Maps API non caricato.");
     return;
   }
   const mapEl = document.getElementById("map");
@@ -638,7 +637,7 @@ function loadMap() {
       markersData.push({ client: client, position: coordsMap[client] });
     }
   });
-  let center = { lat: 45.4654, lng: 9.1866 }; // coordinate di default
+  let center = { lat: 45.4654, lng: 9.1866 }; 
   if (markersData.length > 0) {
     center = markersData[0].position;
   }
@@ -683,3 +682,17 @@ document.addEventListener("touchend", function (e) {
   touchendX = e.changedTouches[0].screenX;
   handleGesture();
 });
+
+function finishCycle() {
+  const currentCycleDeliveries = getCurrentCycle();
+  appendDeliveryHistory(currentCycleDeliveries);
+  resetCurrentCycle();
+  const app = document.getElementById("app");
+  const notice = document.createElement("div");
+  notice.className = "complete-message fade-in";
+  notice.textContent = "Consegne resettate con successo! Pronto per il prossimo giro.";
+  app.appendChild(notice);
+  setTimeout(() => {
+    location.reload();
+  }, 2000);
+}
