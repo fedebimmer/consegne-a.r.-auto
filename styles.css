@@ -166,7 +166,6 @@ button:active {
 #map {
   width: 100%;
   height: 300px;
+  border-radius: 12px;
   margin-bottom: 15px;
-  border: 1px solid #ccc;
-  border-radius: 10px;
 }

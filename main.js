@@ -4,7 +4,8 @@ const appState = {
   userName: null,
   currentRoute: null,
   selectedClients: null,
-  currentView: "login" // possible values: login, routeSelection, clientSelection, mapView, deliveries, history, summary
+  currentView: "login", // possible values: login, routeSelection, clientSelection, departureConfirm, deliveries, history, summary
+  optimizedRouteLink: ""
 };
 
 const routes = {
@@ -51,47 +52,48 @@ const routes = {
   ]
 };
 
+// Mappa preimpostata delle coordinate GPS per ogni cliente
 const clientCoordinates = {
   "Giro Binasco": {
-    "BUZZETTA GOMME": { lat: 45.460, lng: 9.150 },
-    "CERTOSA": { lat: 45.461, lng: 9.152 },
-    "DI LALLA": { lat: 45.462, lng: 9.154 },
-    "EPR": { lat: 45.463, lng: 9.156 },
-    "ESSO BINASCO": { lat: 45.464, lng: 9.158 },
-    "EUROGOMME": { lat: 45.465, lng: 9.160 },
-    "GIMA": { lat: 45.466, lng: 9.162 },
-    "M.L. GOMME": { lat: 45.467, lng: 9.164 },
-    "ROCCO SARLI": { lat: 45.468, lng: 9.166 },
-    "TIMEOUT": { lat: 45.469, lng: 9.168 }
+    "BUZZETTA GOMME": { lat: 45.4654, lng: 9.1866 },
+    "CERTOSA": { lat: 45.4660, lng: 9.1900 },
+    "DI LALLA": { lat: 45.4640, lng: 9.1870 },
+    "EPR": { lat: 45.4670, lng: 9.1830 },
+    "ESSO BINASCO": { lat: 45.4650, lng: 9.1850 },
+    "EUROGOMME": { lat: 45.4680, lng: 9.1820 },
+    "GIMA": { lat: 45.4630, lng: 9.1840 },
+    "M.L. GOMME": { lat: 45.4645, lng: 9.1860 },
+    "ROCCO SARLI": { lat: 45.4685, lng: 9.1890 },
+    "TIMEOUT": { lat: 45.4675, lng: 9.1880 }
   },
   "Giro Opera": {
-    "AGA": { lat: 45.470, lng: 9.170 },
-    "CGR": { lat: 45.471, lng: 9.172 },
-    "ESSEGI GARAGE": { lat: 45.472, lng: 9.174 },
-    "GALBIATI": { lat: 45.473, lng: 9.176 },
-    "GM GROUP": { lat: 45.474, lng: 9.178 },
-    "GOMMISTERIA": { lat: 45.475, lng: 9.180 },
-    "IL GOMMISTA": { lat: 45.476, lng: 9.182 },
-    "R.VAI": { lat: 45.477, lng: 9.184 },
-    "SANTA BARBARA": { lat: 45.478, lng: 9.186 },
-    "TARANTOLA": { lat: 45.479, lng: 9.188 },
-    "UNIRADE": { lat: 45.480, lng: 9.190 }
+    "AGA": { lat: 45.4654, lng: 9.1900 },
+    "CGR": { lat: 45.4664, lng: 9.1910 },
+    "ESSEGI GARAGE": { lat: 45.4674, lng: 9.1920 },
+    "GALBIATI": { lat: 45.4684, lng: 9.1930 },
+    "GM GROUP": { lat: 45.4694, lng: 9.1940 },
+    "GOMMISTERIA": { lat: 45.4704, lng: 9.1950 },
+    "IL GOMMISTA": { lat: 45.4714, lng: 9.1960 },
+    "R.VAI": { lat: 45.4724, lng: 9.1970 },
+    "SANTA BARBARA": { lat: 45.4734, lng: 9.1980 },
+    "TARANTOLA": { lat: 45.4744, lng: 9.1990 },
+    "UNIRADE": { lat: 45.4754, lng: 9.2000 }
   },
   "Giro Vidigulfo": {
-    "ARETUSA": { lat: 45.481, lng: 9.191 },
-    "CARBIKE": { lat: 45.482, lng: 9.193 },
-    "CARROZZERIA GARAGE ROMA": { lat: 45.483, lng: 9.195 },
-    "CIBE": { lat: 45.484, lng: 9.197 },
-    "CORSI": { lat: 45.485, lng: 9.199 },
-    "DAMIANI": { lat: 45.486, lng: 9.201 },
-    "GAZZONIS": { lat: 45.487, lng: 9.203 },
-    "ISAM": { lat: 45.488, lng: 9.205 },
-    "MARTELLI": { lat: 45.489, lng: 9.207 },
-    "MIGLIAVACCA": { lat: 45.490, lng: 9.209 },
-    "OFFICINA GARAGE ROMA": { lat: 45.491, lng: 9.211 },
-    "PENITI": { lat: 45.492, lng: 9.213 },
-    "SEDE MELEGNANO": { lat: 45.493, lng: 9.215 },
-    "TRC": { lat: 45.494, lng: 9.217 }
+    "ARETUSA": { lat: 45.4654, lng: 9.2010 },
+    "CARBIKE": { lat: 45.4664, lng: 9.2020 },
+    "CARROZZERIA GARAGE ROMA": { lat: 45.4674, lng: 9.2030 },
+    "CIBE": { lat: 45.4684, lng: 9.2040 },
+    "CORSI": { lat: 45.4694, lng: 9.2050 },
+    "DAMIANI": { lat: 45.4704, lng: 9.2060 },
+    "GAZZONIS": { lat: 45.4714, lng: 9.2070 },
+    "ISAM": { lat: 45.4724, lng: 9.2080 },
+    "MARTELLI": { lat: 45.4734, lng: 9.2090 },
+    "MIGLIAVACCA": { lat: 45.4744, lng: 9.2100 },
+    "OFFICINA GARAGE ROMA": { lat: 45.4754, lng: 9.2110 },
+    "PENITI": { lat: 45.4764, lng: 9.2120 },
+    "SEDE MELEGNANO": { lat: 45.4774, lng: 9.2130 },
+    "TRC": { lat: 45.4784, lng: 9.2140 }
   }
 };
 
@@ -102,19 +104,19 @@ function initApp() {
 function renderApp() {
   const app = document.getElementById("app");
   app.innerHTML = "";
-  
+
   if (appState.userName) {
     app.appendChild(renderNav());
   }
-  
+
   if (!appState.userName || appState.currentView === "login") {
     renderLogin();
   } else if (appState.currentView === "routeSelection") {
     renderRouteSelection();
   } else if (appState.currentView === "clientSelection") {
     renderClientSelection();
-  } else if (appState.currentView === "mapView") {
-    renderMapView();
+  } else if (appState.currentView === "departureConfirm") {
+    renderDepartureConfirm();
   } else if (appState.currentView === "deliveries") {
     renderDeliveryList();
   } else if (appState.currentView === "history") {
@@ -275,7 +277,8 @@ function renderClientSelection() {
       return;
     }
     appState.selectedClients = selected;
-    appState.currentView = "mapView";
+    // Dopo aver selezionato i clienti, passa alla schermata di conferma (con mappa integrata)
+    appState.currentView = "departureConfirm";
     renderApp();
   });
   container.appendChild(submitBtn);
@@ -295,28 +298,79 @@ function renderClientSelection() {
   app.appendChild(container);
 }
 
-function renderMapView() {
+function renderDepartureConfirm() {
   const app = document.getElementById("app");
-  app.innerHTML = "";
-  if(appState.userName) {
-    app.appendChild(renderNav());
-  }
   const container = document.createElement("div");
   container.className = "container fade-in";
 
-  const title = document.createElement("h2");
-  title.className = "section-title";
-  title.textContent = "Percorso Selezionato";
-  container.appendChild(title);
+  // Aggiungi la mappa interattiva per mostrare i clienti selezionati
+  const mapContainer = document.createElement("div");
+  mapContainer.id = "map";
+  mapContainer.style.height = "300px";
+  mapContainer.style.marginBottom = "20px";
+  container.appendChild(mapContainer);
 
-  const mapDiv = document.createElement("div");
-  mapDiv.id = "map";
-  container.appendChild(mapDiv);
+  const message = document.createElement("p");
+  message.style.marginBottom = "20px";
+  message.style.textAlign = "center";
+  message.textContent =
+    "Hai caricato le consegne sul mezzo? Se clicchi SI aggiorneremo l'orario di uscita della merce.";
+  container.appendChild(message);
 
-  const confirmBtn = document.createElement("button");
-  confirmBtn.textContent = "Carica Consegne e Parti";
-  confirmBtn.addEventListener("click", confirmDepartureWithMap);
-  container.appendChild(confirmBtn);
+  const yesBtn = document.createElement("button");
+  yesBtn.textContent = "Sì";
+  yesBtn.addEventListener("click", () => {
+    navigator.geolocation.getCurrentPosition(
+      function (position) {
+        const driverCoords = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+        const coordsMap = clientCoordinates[appState.currentRoute];
+        const markers = [];
+        appState.selectedClients.forEach((client) => {
+          if (coordsMap[client]) {
+            markers.push(coordsMap[client]);
+          }
+        });
+        if (markers.length > 0) {
+          const origin = `${driverCoords.lat},${driverCoords.lng}`;
+          const destination = `${markers[markers.length - 1].lat},${markers[markers.length - 1].lng}`;
+          const waypoints = markers
+            .slice(0, markers.length - 1)
+            .map((coord) => `${coord.lat},${coord.lng}`)
+            .join("|");
+          let url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`;
+          if (waypoints) {
+            url += `&waypoints=optimize:true|${waypoints}`;
+          }
+          appState.optimizedRouteLink = url;
+        }
+        const now = new Date();
+        const departureRecord = {
+          name: appState.userName,
+          route: appState.currentRoute,
+          datetime: now.toISOString(),
+          type: "departure",
+          driverCoords: driverCoords,
+          routeLink: appState.optimizedRouteLink || "",
+        };
+        saveDeparture(departureRecord);
+        sendDepartureNotification(departureRecord);
+        // Salva il percorso completato in LocalStorage
+        saveCompletedRoute({
+          ...departureRecord,
+          clients: appState.selectedClients,
+        });
+        appState.currentView = "deliveries";
+        renderApp();
+      },
+      function (error) {
+        alert("Errore nel rilevamento della posizione: " + error.message);
+      }
+    );
+  });
+  container.appendChild(yesBtn);
 
   const backBtn = document.createElement("button");
   backBtn.className = "nav-button";
@@ -329,106 +383,8 @@ function renderMapView() {
   container.appendChild(backBtn);
 
   app.appendChild(container);
-  setTimeout(initMapForView, 300);
-}
-
-function initMapForView() {
-  if (typeof google === "undefined" || !google.maps) {
-    console.error("Google Maps API non disponibile.");
-    return;
-  }
-  const mapDiv = document.getElementById("map");
-  if (!mapDiv) return;
-
-  let sumLat = 0, sumLng = 0, count = 0;
-  appState.selectedClients.forEach(client => {
-    const coord = clientCoordinates[appState.currentRoute][client];
-    if (coord) {
-      sumLat += coord.lat;
-      sumLng += coord.lng;
-      count++;
-    }
-  });
-  const center = count > 0 ? { lat: sumLat / count, lng: sumLng / count } : { lat: 45.465, lng: 9.190 };
-
-  const map = new google.maps.Map(mapDiv, {
-    center: center,
-    zoom: 13
-  });
-
-  const bounds = new google.maps.LatLngBounds();
-  appState.selectedClients.forEach(client => {
-    const coord = clientCoordinates[appState.currentRoute][client];
-    if (coord) {
-      const marker = new google.maps.Marker({
-        position: coord,
-        map: map,
-        title: client
-      });
-      bounds.extend(marker.getPosition());
-    }
-  });
-  if (count > 0) {
-    map.fitBounds(bounds);
-  }
-}
-
-function confirmDepartureWithMap() {
-  const now = new Date();
-  const departureRecord = {
-    name: appState.userName,
-    route: appState.currentRoute,
-    datetime: now.toISOString()
-  };
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        departureRecord.gps = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
-        proceedWithDeparture(departureRecord);
-      },
-      (error) => {
-        console.warn("Geolocalizzazione non disponibile. Procedo senza GPS.");
-        proceedWithDeparture(departureRecord);
-      }
-    );
-  } else {
-    proceedWithDeparture(departureRecord);
-  }
-}
-
-function proceedWithDeparture(departureRecord) {
-  saveDeparture(departureRecord);
-  const mapsLink = generateMapsLink();
-  sendDepartureNotification(departureRecord, mapsLink);
-  appState.currentView = "deliveries";
-  renderApp();
-}
-
-function generateMapsLink() {
-  const waypoints = [];
-  appState.selectedClients.forEach(client => {
-    const coord = clientCoordinates[appState.currentRoute][client];
-    if (coord) {
-      waypoints.push(coord.lat + "," + coord.lng);
-    }
-  });
-  if (waypoints.length > 0) {
-    return "https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=My+Location&travelmode=driving&waypoints=optimize:true|" + waypoints.join("|");
-  }
-  return "https://www.google.com/maps";
-}
-
-function sendDepartureNotification(departure, mapsLink) {
-  const departureTimeFormatted = new Date(departure.datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  let message = `🛻 ${departure.name} è partito per le consegne del giro ${departure.route} alle ${departureTimeFormatted}.`;
-  if (mapsLink) {
-    message += ` Ecco il percorso: ${mapsLink}`;
-  }
-  const url = `https://api.whatsapp.com/send?phone=393939393799&text=${encodeURIComponent(message)}`;
-  window.open(url, "_blank");
+  // Dopo aver inserito il container, carica la mappa con i punti dei clienti selezionati
+  loadMap();
 }
 
 function renderDeliveryList() {
@@ -482,35 +438,50 @@ function renderDeliveryList() {
 }
 
 function completeDelivery(client) {
-  const now = new Date();
-  const delivery = {
-    name: appState.userName,
-    route: appState.currentRoute,
-    client: client,
-    datetime: now.toISOString()
-  };
-  saveDelivery(delivery);
-  sendWhatsAppNotification(delivery);
-  
-  if (checkAllDeliveriesCompleted()) {
-    const app = document.getElementById("app");
-    const notice = document.createElement("div");
-    notice.className = "complete-message fade-in";
-    notice.textContent = "Tutte le consegne completate! Inizio nuovo ciclo...";
-    app.appendChild(notice);
-    setTimeout(() => {
-      appState.currentRoute = null;
-      appState.selectedClients = null;
-      appState.currentView = "routeSelection";
-      renderApp();
-    }, 2000);
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      function (position) {
+        const now = new Date();
+        const delivery = {
+          name: appState.userName,
+          route: appState.currentRoute,
+          client: client,
+          datetime: now.toISOString(),
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        saveDelivery(delivery);
+        sendWhatsAppNotification(delivery);
+        if (checkAllDeliveriesCompleted()) {
+          const app = document.getElementById("app");
+          const notice = document.createElement("div");
+          notice.className = "complete-message fade-in";
+          notice.textContent = "Tutte le consegne completate! Inizio nuovo ciclo...";
+          app.appendChild(notice);
+          setTimeout(() => {
+            appState.currentRoute = null;
+            appState.selectedClients = null;
+            appState.currentView = "routeSelection";
+            renderApp();
+          }, 2000);
+        } else {
+          renderApp();
+        }
+      },
+      function (error) {
+        alert("Posizione non disponibile. Per favore, abilita la geolocalizzazione nel browser.");
+      }
+    );
   } else {
-    renderApp();
+    alert("Geolocation non supportata dal tuo browser.");
   }
 }
 
 function sendWhatsAppNotification(delivery) {
-  const message = `Fattorino: ${delivery.name}, Giro: ${delivery.route}, Cliente: ${delivery.client}`;
+  let message = `Consegna effettuata da ${delivery.name} per il cliente ${delivery.client}.`;
+  if (delivery.lat && delivery.lng) {
+    message += ` Posizione: https://www.google.com/maps?q=${delivery.lat},${delivery.lng}`;
+  }
   const url = `https://api.whatsapp.com/send?phone=393939393799&text=${encodeURIComponent(message)}`;
   window.open(url, "_blank");
 }
@@ -547,6 +518,13 @@ function renderHistory() {
       const info = document.createElement("span");
       info.textContent = text;
       item.appendChild(info);
+      if (record.lat && record.lng) {
+        const posLink = document.createElement("a");
+        posLink.href = `https://www.google.com/maps?q=${record.lat},${record.lng}`;
+        posLink.target = "_blank";
+        posLink.textContent = " (Posizione)";
+        item.appendChild(posLink);
+      }
       container.appendChild(item);
     });
   }
@@ -607,6 +585,13 @@ function saveDeparture(departure) {
   localStorage.setItem("deliveries", JSON.stringify(records));
 }
 
+function saveCompletedRoute(routeInfo) {
+  const data = localStorage.getItem("completedRoutes");
+  let routes = data ? JSON.parse(data) : [];
+  routes.push(routeInfo);
+  localStorage.setItem("completedRoutes", JSON.stringify(routes));
+}
+
 function getTodayDate() {
   const today = new Date();
   return today.toISOString().substring(0, 10);
@@ -626,5 +611,75 @@ function isDeliveredForToday(client) {
 
 function checkAllDeliveriesCompleted() {
   if (!appState.selectedClients || appState.selectedClients.length === 0) return false;
-  return appState.selectedClients.every(client => isDeliveredForToday(client));
+  return appState.selectedClients.every((client) => isDeliveredForToday(client));
 }
+
+function sendDepartureNotification(departure) {
+  const departureTimeFormatted = new Date(departure.datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  let message = ` ${departure.name} è partito per le consegne del giro ${departure.route} alle ${departureTimeFormatted}`;
+  if (departure.routeLink) {
+    message += `\nEcco il percorso: ${departure.routeLink}`;
+  }
+  const url = `https://api.whatsapp.com/send?phone=393939393799&text=${encodeURIComponent(message)}`;
+  window.open(url, "_blank");
+}
+
+function loadMap() {
+  if (!window.google || !google.maps) {
+    console.error("Google Maps API non caricato.");
+    return;
+  }
+  const mapEl = document.getElementById("map");
+  if (!mapEl) return;
+  const coordsMap = clientCoordinates[appState.currentRoute];
+  const markersData = [];
+  appState.selectedClients.forEach((client) => {
+    if (coordsMap[client]) {
+      markersData.push({ client: client, position: coordsMap[client] });
+    }
+  });
+  let center = { lat: 45.4654, lng: 9.1866 }; // coordinate di default
+  if (markersData.length > 0) {
+    center = markersData[0].position;
+  }
+  const map = new google.maps.Map(mapEl, {
+    center: center,
+    zoom: 14,
+    disableDefaultUI: true,
+    gestureHandling: "greedy"
+  });
+  markersData.forEach((markerData) => {
+    const marker = new google.maps.Marker({
+      position: markerData.position,
+      map: map,
+      title: markerData.client,
+      animation: google.maps.Animation.DROP
+    });
+  });
+}
+
+let touchstartX = 0;
+let touchendX = 0;
+
+function handleGesture() {
+  if (touchendX > touchstartX + 50) {
+    if (appState.currentView === "clientSelection") {
+      appState.currentRoute = null;
+      appState.selectedClients = null;
+      appState.currentView = "routeSelection";
+      renderApp();
+    } else if (appState.currentView === "deliveries") {
+      appState.currentView = "clientSelection";
+      renderApp();
+    }
+  }
+}
+
+document.addEventListener("touchstart", function (e) {
+  touchstartX = e.changedTouches[0].screenX;
+});
+
+document.addEventListener("touchend", function (e) {
+  touchendX = e.changedTouches[0].screenX;
+  handleGesture();
+});
