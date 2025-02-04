@@ -4,7 +4,7 @@ const appState = {
   userName: null,
   currentRoute: null,
   selectedClients: null,
-  currentView: "login" // possible values: login, routeSelection, clientSelection, deliveries, history, summary
+  currentView: "login" // possible values: login, routeSelection, clientSelection, departureConfirm, deliveries, history, summary
 };
 
 const routes = {
@@ -69,6 +69,8 @@ function renderApp() {
     renderRouteSelection();
   } else if (appState.currentView === "clientSelection") {
     renderClientSelection();
+  } else if (appState.currentView === "departureConfirm") {
+    renderDepartureConfirm();
   } else if (appState.currentView === "deliveries") {
     renderDeliveryList();
   } else if (appState.currentView === "history") {
@@ -230,7 +232,8 @@ function renderClientSelection() {
       return;
     }
     appState.selectedClients = selected;
-    appState.currentView = "deliveries";
+    // Invece di andare direttamente alle consegne, mostra la conferma del caricamento delle consegne sul mezzo.
+    appState.currentView = "departureConfirm";
     renderApp();
   });
   container.appendChild(submitBtn);
@@ -243,6 +246,49 @@ function renderClientSelection() {
     appState.currentRoute = null;
     appState.selectedClients = null;
     appState.currentView = "routeSelection";
+    renderApp();
+  });
+  container.appendChild(backBtn);
+
+  app.appendChild(container);
+}
+
+function renderDepartureConfirm() {
+  const app = document.getElementById("app");
+  const container = document.createElement("div");
+  container.className = "container fade-in";
+
+  const message = document.createElement("p");
+  message.style.marginBottom = "20px";
+  message.style.textAlign = "center";
+  message.textContent =
+    "Hai caricato le consegne sul mezzo? Se clicchi SI aggiorneremo l'orario di uscita della merce.";
+  container.appendChild(message);
+
+  const yesBtn = document.createElement("button");
+  yesBtn.textContent = "Sì";
+  yesBtn.addEventListener("click", () => {
+    const now = new Date();
+    const departureRecord = {
+      name: appState.userName,
+      route: appState.currentRoute,
+      datetime: now.toISOString(),
+      type: "departure"
+    };
+    saveDeparture(departureRecord);
+    sendDepartureNotification(departureRecord);
+    // Dopo aver confermato la partenza, passa alla schermata di consegne.
+    appState.currentView = "deliveries";
+    renderApp();
+  });
+  container.appendChild(yesBtn);
+
+  const backBtn = document.createElement("button");
+  backBtn.className = "nav-button";
+  backBtn.textContent = "Modifica Selezione";
+  backBtn.style.marginTop = "10px";
+  backBtn.addEventListener("click", () => {
+    appState.currentView = "clientSelection";
     renderApp();
   });
   container.appendChild(backBtn);
@@ -312,7 +358,6 @@ function completeDelivery(client) {
   sendWhatsAppNotification(delivery);
   
   if (checkAllDeliveriesCompleted()) {
-    // Se tutte le consegne selezionate sono completate, mostra un messaggio e ripristina per il nuovo ciclo.
     const app = document.getElementById("app");
     const notice = document.createElement("div");
     notice.className = "complete-message fade-in";
@@ -345,21 +390,27 @@ function renderHistory() {
   title.textContent = "Cronologia Consegne";
   container.appendChild(title);
 
-  const deliveries = getDeliveries().sort(
+  const records = getDeliveries().sort(
     (a, b) => new Date(b.datetime) - new Date(a.datetime)
   );
 
-  if (deliveries.length === 0) {
+  if (records.length === 0) {
     const para = document.createElement("p");
     para.textContent = "Nessuna consegna registrata.";
     container.appendChild(para);
   } else {
-    deliveries.forEach((delivery) => {
+    records.forEach((record) => {
       const item = document.createElement("div");
       item.className = "list-item";
+      const date = new Date(record.datetime);
+      let text = `${date.toLocaleString()} - ${record.name} - ${record.route}`;
+      if (record.type === "departure") {
+        text += " - Partenza";
+      } else {
+        text += " - " + record.client;
+      }
       const info = document.createElement("span");
-      const date = new Date(delivery.datetime);
-      info.textContent = `${date.toLocaleString()} - ${delivery.name} - ${delivery.route} - ${delivery.client}`;
+      info.textContent = text;
       item.appendChild(info);
       container.appendChild(item);
     });
@@ -415,6 +466,12 @@ function saveDelivery(delivery) {
   localStorage.setItem("deliveries", JSON.stringify(deliveries));
 }
 
+function saveDeparture(departure) {
+  const records = getDeliveries();
+  records.push(departure);
+  localStorage.setItem("deliveries", JSON.stringify(records));
+}
+
 function getTodayDate() {
   const today = new Date();
   return today.toISOString().substring(0, 10);
@@ -435,6 +492,14 @@ function isDeliveredForToday(client) {
 function checkAllDeliveriesCompleted() {
   if (!appState.selectedClients || appState.selectedClients.length === 0) return false;
   return appState.selectedClients.every(client => isDeliveredForToday(client));
+}
+
+// Nuova funzione per inviare notifica di partenza via WhatsApp
+function sendDepartureNotification(departure) {
+  const departureTimeFormatted = new Date(departure.datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const message = `🛻 ${departure.name} è partito per le consegne del giro ${departure.route} alle ${departureTimeFormatted}`;
+  const url = `https://api.whatsapp.com/send?phone=393939393799&text=${encodeURIComponent(message)}`;
+  window.open(url, "_blank");
 }
 
 // Swipe gesture per una navigazione mobile semplice
